@@ -71,6 +71,10 @@ instance {-# OVERLAPPABLE #-} (MakeAppComm mac, MakeAppCommArg ty) => MakeAppCom
 instance {-# OVERLAPPABLE #-} (MakeAppComm mac) => MakeAppComm (SenderUserId -> mac) where
   makeAppComm _ = makeAppComm (Proxy :: Proxy mac)
 
+-- we don't get the interaction from the command itself, so ignore it
+instance {-# OVERLAPPABLE #-} (MakeAppComm mac) => MakeAppComm (Interaction -> mac) where
+  makeAppComm _ = makeAppComm (Proxy :: Proxy mac)
+
 -- | From a single value, make an argument for a slash command command.
 class MakeAppCommArg commandty where
   makeAppCommArg :: Proxy commandty -> OptionValue
