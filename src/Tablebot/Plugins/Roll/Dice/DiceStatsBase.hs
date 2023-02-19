@@ -15,6 +15,7 @@ module Tablebot.Plugins.Roll.Dice.DiceStatsBase
 where
 
 import Codec.Picture (PngSavable (encodePng))
+import Control.Monad.Exception (MonadException)
 import Data.Bifunctor
 import qualified Data.ByteString.Lazy as B
 import qualified Data.Distribution as D
@@ -25,10 +26,11 @@ import qualified Data.Text as T
 import Diagrams (Diagram, dims2D, renderDia)
 import Diagrams.Backend.Rasterific
 import Graphics.Rendering.Chart.Axis.Int
-import Graphics.Rendering.Chart.Backend.Diagrams (defaultEnv, runBackendR)
+import Graphics.Rendering.Chart.Backend.Diagrams (runBackendR)
 import Graphics.Rendering.Chart.Backend.Types
 import Graphics.Rendering.Chart.Easy
 import Tablebot.Plugins.Roll.Dice.DiceEval (evaluationException)
+import Tablebot.Utility.Font (FontMap, makeSansSerifEnv)
 
 -- | A wrapper type for mapping values to their probabilities.
 type Distribution = D.Distribution Integer
@@ -39,22 +41,21 @@ diagramX, diagramY :: Double
 
 -- | Get the ByteString representation of the given distribution, setting the
 -- string as its title.
-distributionByteString :: [(Distribution, T.Text)] -> IO B.ByteString
-distributionByteString d = encodePng . renderDia Rasterific opts <$> distributionDiagram d
+distributionByteString :: MonadException m => FontMap Double -> [(Distribution, T.Text)] -> m B.ByteString
+distributionByteString fontMap d = encodePng . renderDia Rasterific opts <$> distributionDiagram fontMap d
   where
     opts = RasterificOptions (dims2D diagramX diagramY)
 
 -- | Get the Diagram representation of the given distribution, setting the
 -- string as its title.
-distributionDiagram :: [(Distribution, T.Text)] -> IO (Diagram B)
-distributionDiagram d = do
+distributionDiagram :: MonadException m => FontMap Double -> [(Distribution, T.Text)] -> m (Diagram B)
+distributionDiagram fontMap d = do
   if null d
     then evaluationException "empty distribution" []
-    else do
-      defEnv <- defaultEnv (AlignmentFns id id) diagramX diagramY
-      return . fst $ runBackendR defEnv r
+    else return . fst $ runBackendR defEnv r
   where
     r = distributionRenderable d
+    defEnv = makeSansSerifEnv diagramX diagramY fontMap
 
 -- | Get the Renderable representation of the given distribution, setting the
 -- string as its title.

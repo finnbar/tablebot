@@ -23,7 +23,7 @@ import Tablebot.Plugins.Roll.Dice.DiceData
 import Tablebot.Plugins.Roll.Dice.DiceFunctions (FuncInfoBase (..), ListInteger (..))
 import Tablebot.Plugins.Roll.Dice.DiceParsing ()
 import Tablebot.Utility.Discord (Format (..), formatInput, formatText)
-import Tablebot.Utility.Exception (BotException (EvaluationException), catchBot, throwBot)
+import Tablebot.Utility.Exception (BotException (EvaluationException), catchBot, evaluationException, throwBot)
 import Tablebot.Utility.Parser (ParseShow (parseShow))
 import Tablebot.Utility.Random (chooseOne)
 
@@ -64,10 +64,6 @@ checkRNGCount :: ProgramStateM ()
 checkRNGCount = do
   rngCount <- gets getRNGCount
   when (rngCount > maximumRNG) $ evaluationException ("Maximum RNG count exceeded (" <> pack (show maximumRNG) <> ")") []
-
--- | Utility function to throw an `EvaluationException` when using `Text`.
-evaluationException :: (MonadException m) => Text -> [Text] -> m a
-evaluationException nm locs = throwBot $ EvaluationException (unpack nm) (unpack <$> locs)
 
 --- Evaluating an expression. Uses IO because dice are random
 

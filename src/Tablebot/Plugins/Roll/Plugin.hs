@@ -23,6 +23,7 @@ import Discord.Interactions
 import Discord.Internal.Rest.Channel (ChannelRequest (..), MessageDetailedOpts (..))
 import Discord.Types (ActionRow (..), Button (..), Message (..), User (..), UserId, mkButton, mkEmoji)
 import System.Timeout (timeout)
+import Tablebot.Internal.Cache (getFontMap)
 import Tablebot.Internal.Handler.Command (parseValue)
 import Tablebot.Plugins.Roll.Dice
 import Tablebot.Plugins.Roll.Dice.DiceData
@@ -223,6 +224,8 @@ statsCommand :: Command
 statsCommand = Command "stats" statsCommandParser []
   where
     oneSecond = 1000000
+    fiveSeconds = 5 * oneSecond
+    timeoutTime = fiveSeconds
     statsCommandParser :: Parser (Message -> DatabaseDiscord ())
     statsCommandParser = do
       firstE <- pars
@@ -230,11 +233,12 @@ statsCommand = Command "stats" statsCommandParser []
       return $ statsCommand' (firstE : restEs)
     statsCommand' :: [Expr] -> Message -> DatabaseDiscord ()
     statsCommand' es m = do
-      mrange' <- liftIO $ timeout (oneSecond * 5) $ mapM (\e -> rangeExpr e >>= \re -> re `seq` return (re, parseShow e)) es
+      mrange' <- liftIO $ timeout timeoutTime $ mapM (\e -> rangeExpr e >>= \re -> re `seq` return (re, parseShow e)) es
       case mrange' of
         Nothing -> throwBot (EvaluationException "Timed out calculating statistics" [])
         (Just range') -> do
-          mimage <- liftIO $ timeout (oneSecond * 5) (distributionByteString range' >>= \res -> res `seq` return res)
+          fontMap <- getFontMap
+          mimage <- liftIO $ timeout timeoutTime (distributionByteString fontMap range' >>= \res -> res `seq` return res)
           case mimage of
             Nothing -> do
               sendMessage m (msg range')

@@ -69,6 +69,8 @@ dependencies:
 - distribution
 - extra
 - process
+- filepath
+- SVGFonts
 
 library:
   source-dirs: src

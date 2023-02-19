@@ -29,4 +29,6 @@ WORKDIR /tablebot
 COPY --from=build /tablebot/build/bin .
 # apparently we need the .git folder
 COPY .git .git 
+# we need fonts for the roll stats
+COPY fonts fonts
 CMD /tablebot/tablebot-exe

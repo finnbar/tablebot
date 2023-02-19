@@ -28,6 +28,7 @@ import Discord.Interactions
 import Discord.Internal.Rest.Channel (MessageDetailedOpts (MessageDetailedOpts))
 import qualified Discord.Requests as R
 import Discord.Types
+import Tablebot.Utility.Font (FontMap)
 import Text.Megaparsec (Parsec)
 
 -- * DatabaseDiscord
@@ -48,9 +49,10 @@ type DatabaseDiscord = EnvDatabaseDiscord ()
 type Database d = SqlPersistM d
 
 data TablebotCache = TCache
-  { cacheKnownEmoji :: Map Text Emoji,
-    cacheApplicationCommands :: Map ApplicationCommandId (Interaction -> EnvDatabaseDiscord () ()),
-    cacheVersionInfo :: VersionInfo
+  { cacheKnownEmoji :: !(Map Text Emoji),
+    cacheApplicationCommands :: !(Map ApplicationCommandId (Interaction -> EnvDatabaseDiscord () ())),
+    cacheVersionInfo :: !VersionInfo,
+    cacheFonts :: !(FontMap Double)
   }
 
 data VersionInfo = VInfo

@@ -26,6 +26,7 @@ Create a `.env` file containing the following keys. Consult `.env.example` if yo
 * `SERVER_ID` (optional) - either `global` or the id of the server the bot will mainly be deployed in. Application commands will be
   registered here. If absent, application commands won't be registered.
 * `EMOJI_SERVERS` (optional) - a list of server IDs that the bot will search for emoji within.
+* `FONT_PATH` (semi-optional) - the full path to the fonts used by rolling stats. Not required if you disable that module.
 * `ALLOW_GIT_UPDATE` (optional) - a `true` or `false` value that determines whether the bot can automatically load data from the repository.
   **Warning!** Be very careful with setting this to true; if you haven't set up permissions properly on your repo and your discord servers then things can go wrong!
 

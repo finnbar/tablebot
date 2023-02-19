@@ -53,6 +53,7 @@ import Tablebot.Internal.Plugins
 import Tablebot.Internal.Types
 import Tablebot.Plugins (addAdministrationPlugin)
 import Tablebot.Utility
+import Tablebot.Utility.Font (makeFontMap)
 import Tablebot.Utility.Help (generateHelp)
 import Text.Regex.PCRE ((=~))
 import UnliftIO.Concurrent
@@ -117,7 +118,8 @@ runTablebot vinfo dToken prefix dbpath plugins config =
       mapM_ (\migration -> runSqlPool (runMigration migration) pool) $ combinedMigrations plugin
       -- Create a var to kill any ongoing tasks.
       mvar <- newEmptyMVar
-      cacheMVar <- newMVar (TCache M.empty M.empty vinfo)
+      fm <- NoLoggingT makeFontMap
+      cacheMVar <- newMVar (TCache M.empty M.empty vinfo fm)
       userFacingError <-
         NoLoggingT $
           runDiscord $

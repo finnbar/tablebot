@@ -16,6 +16,7 @@ import Control.Monad.Trans.Reader (ask)
 import qualified Data.Map as M
 import Data.Text (Text)
 import Discord.Types
+import Tablebot.Utility.Font (FontMap)
 import Tablebot.Utility.Types
 
 lookupEmojiCache :: Text -> EnvDatabaseDiscord s (Maybe Emoji)
@@ -49,3 +50,9 @@ getVersionInfo = do
   mcache <- liftCache ask
   cache <- liftIO $ readMVar mcache
   pure $ cacheVersionInfo cache
+
+getFontMap :: EnvDatabaseDiscord s (FontMap Double)
+getFontMap = do
+  mcache <- liftCache ask
+  cache <- liftIO $ readMVar mcache
+  pure $ cacheFonts cache

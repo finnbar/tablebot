@@ -16,12 +16,14 @@ module Tablebot.Utility.Exception
     showError,
     showUserError,
     embedError,
+    evaluationException,
   )
 where
 
 import Control.Monad.Exception (Exception, MonadException, catch, throw)
 import Data.List (intercalate)
 import Data.Text (pack)
+import qualified Data.Text as T
 import Discord.Internal.Types
 import Tablebot.Utility.Embed
 
@@ -72,6 +74,10 @@ formatUserError name' message =
     ++ "> `"
     ++ message
     ++ "`"
+
+-- | Utility function to throw an `EvaluationException` when using `Text`.
+evaluationException :: (MonadException m) => T.Text -> [T.Text] -> m a
+evaluationException nm locs = throwBot $ EvaluationException (T.unpack nm) (T.unpack <$> locs)
 
 -- | @ErrorInfo@ packs the info for each error into one data type. This allows
 -- each error type to be defined in one block (as opposed to errorName being
