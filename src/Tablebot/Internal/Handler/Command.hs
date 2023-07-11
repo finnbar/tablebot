@@ -146,7 +146,7 @@ makeReadable (TrivialError i _ good) =
   let (lab, others) = getLabel (toList good)
    in case lab of
         Just l -> (FancyError i . singleton . ErrorCustom $ KnownError l others, Just l)
-        Nothing -> (FancyError i . singleton $ ErrorCustom UnknownError, Nothing)
+        Nothing -> (FancyError i . singleton $ ErrorCustom $ KnownError "Unknown error without label" others, Nothing)
   where
     getLabel :: [ErrorItem (Token Text)] -> (Maybe String, [String])
     getLabel [] = (Nothing, [])

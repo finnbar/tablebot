@@ -10,17 +10,16 @@
 module Tablebot.Utility.Help where
 
 import Data.Default (Default (def))
-import Data.Functor (($>))
 import Data.Text (Text)
 import qualified Data.Text as T
 import Tablebot.Internal.Permission (getSenderPermission, userHasPermission)
 import Tablebot.Internal.Plugins (changeAction)
 import Tablebot.Internal.Types
 import Tablebot.Utility.Discord (Message, sendMessage)
-import Tablebot.Utility.Parser (skipSpace)
+import Tablebot.Utility.Parser (skipSpace1)
 import Tablebot.Utility.Permission (requirePermission)
 import Tablebot.Utility.Types hiding (helpPages)
-import Text.Megaparsec (choice, chunk, eof, try, (<?>), (<|>))
+import Text.Megaparsec (choice, chunk, eof, (<|>))
 
 helpHelpPage :: HelpPage
 helpHelpPage = HelpPage "help" [] "show information about commands" "**Help**\nShows information about bot commands\n\n*Usage:* `help <page>`" [] None
@@ -32,15 +31,19 @@ generateHelp rootText p =
     }
 
 handleHelp :: Text -> [HelpPage] -> Parser (Message -> CompiledDatabaseDiscord ())
-handleHelp rootText hp = parseHelpPage root
+handleHelp rootText hp = base <|> parsePages
   where
     root = HelpPage "" [] "" rootText hp None
+    base = eof >> pure (displayHelp root) -- base help command
+    parsePages = choice $ map parseHelpPage hp -- one of the commands we're asking for help on
 
 parseHelpPage :: HelpPage -> Parser (Message -> CompiledDatabaseDiscord ())
 parseHelpPage hp = do
-  _ <- choice (map chunk (helpName hp : helpAliases hp))
-  skipSpace
-  (try eof $> displayHelp hp) <|> choice (map parseHelpPage $ helpSubpages hp) <?> "Unknown Subcommand"
+  _ <- choice (map chunk (helpName hp : helpAliases hp)) -- we parse out the command name
+  base <|> subcommands
+  where
+    base = eof >> pure (displayHelp hp)
+    subcommands = skipSpace1 >> choice (map parseHelpPage $ helpSubpages hp)
 
 displayHelp :: HelpPage -> Message -> CompiledDatabaseDiscord ()
 displayHelp hp m = changeAction () . requirePermission (helpPermission hp) m $ do
