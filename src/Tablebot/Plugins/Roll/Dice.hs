@@ -40,10 +40,10 @@
 -- vars - "var" spc1 "!"? ("l_" name spcs "=" spcs lstv | name spcs "=" spcs expr)
 -- lstv - nbse "#" base | funcBasics | lstb | name | misc
 -- lstb - "{" expr ("," expr)* "}" | "(" lstv ")"
--- expr - term ([+-] expr)? | misc
--- term - nega ([*/] term)?
+-- expr - term ([+-] term)* | misc
+-- term - nega ([*/] nega)*
 -- nega - "-" expo | expo
--- expo - func "^" expo | func
+-- expo - func ("^" func)*
 -- func - funcBasics | base
 -- base - dice | nbse | name
 -- nbse - "(" expr ")" | [0-9]+

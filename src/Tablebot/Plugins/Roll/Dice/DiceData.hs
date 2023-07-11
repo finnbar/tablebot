@@ -1,3 +1,5 @@
+{-# LANGUAGE PatternSynonyms #-}
+
 -- |
 -- Module      : Tablebot.Plugins.Roll.Dice.DiceData
 -- Description : Data structures for dice and other expressions.
@@ -45,9 +47,6 @@ data Program = Program [Statement] (Either ListValues Expr) deriving (Show)
 data ArgValue = AVExpr Expr | AVListValues ListValues
   deriving (Show)
 
--- | Alias for `MiscData` that returns a `ListValues`.
-type ListValuesMisc = MiscData ListValues
-
 -- | The type for list values.
 data ListValues
   = -- | Represents `N#B`, where N is a NumBase (numbers, parentheses) and B is a Base (numbase or dice value)
@@ -59,7 +58,7 @@ data ListValues
   | -- | A variable that has been defined elsewhere.
     LVVar Text
   | -- | A misc list values expression.
-    ListValuesMisc ListValuesMisc
+    ListValuesMisc (MiscData ListValues)
   deriving (Show)
 
 -- | The type for basic list values (that can be used as is for custom dice).
@@ -71,17 +70,48 @@ data ListValues
 data ListValuesBase = LVBParen (Paren ListValues) | LVBList [Expr]
   deriving (Show)
 
--- | Alias for `MiscData` that returns an `Expr`.
-type ExprMisc = MiscData Expr
+-- | The type for a binary operator between one or more `sub` values
+data BinOp sub typ where
+  BinOp :: Operation typ => sub -> [(typ, sub)] -> BinOp sub typ
 
--- | The type of the top level expression. Represents one of addition,
--- subtraction, or a single term; or some misc expression statement.
-data Expr = ExprMisc ExprMisc | Add Term Expr | Sub Term Expr | NoExpr Term
+deriving instance (Show sub, Show typ) => Show (BinOp sub typ)
+
+-- | Convenience pattern for the empty list.
+pattern SingBinOp :: (Operation typ) => sub -> BinOp sub typ
+pattern SingBinOp a <-
+  BinOp a []
+  where
+    SingBinOp a = BinOp a []
+
+-- | The type class that means we can get an operation on integers from a value.
+class Operation a where
+  getOperation :: a -> (forall n. Integral n => n -> n -> n)
+
+-- | The type of the top level expression.
+--
+-- Represents either a misc expression or additive operations between terms.
+data Expr = ExprMisc (MiscData Expr) | Expr (BinOp Term ExprType)
   deriving (Show)
 
--- | The type representing multiplication, division, or a single negated term.
-data Term = Multi Negation Term | Div Negation Term | NoTerm Negation
+-- | The type of the additive expression, either addition or subtraction.
+data ExprType = Add | Sub
+  deriving (Show, Eq)
+
+instance Operation ExprType where
+  getOperation Sub = (-)
+  getOperation Add = (+)
+
+-- | Represents multiplicative operations between (possible) negations.
+newtype Term = Term (BinOp Negation TermType)
   deriving (Show)
+
+-- | The type of the additive expression, either addition or subtraction.
+data TermType = Multi | Div
+  deriving (Show, Eq)
+
+instance Operation TermType where
+  getOperation Multi = (*)
+  getOperation Div = div
 
 -- | The type representing a possibly negated value.
 data Negation = Neg Expo | NoNeg Expo
@@ -181,11 +211,14 @@ class Converter a b where
 instance Converter ListValuesBase ListValues where
   promote = LVBase
 
+instance (Converter a sub, Operation typ) => Converter a (BinOp sub typ) where
+  promote = SingBinOp . promote
+
 instance (Converter a Term) => Converter a Expr where
-  promote = NoExpr . promote
+  promote = Expr . promote
 
 instance (Converter a Negation) => Converter a Term where
-  promote = NoTerm . promote
+  promote = Term . promote
 
 instance (Converter a Expo) => Converter a Negation where
   promote = NoNeg . promote

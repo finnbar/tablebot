@@ -209,21 +209,21 @@ instance IOEvalList ListValuesBase where
     return (vs, Nothing)
   evalShowL' (LVBParen (Paren lv)) = evalShowL lv
 
-instance IOEvalList ListValuesMisc where
+instance IOEvalList (MiscData ListValues) where
   evalShowL' (MiscVar l) = evalShowL l
   evalShowL' (MiscIf l) = evalShowL l
 
 -- | This type class gives a function which evaluates the value to an integer
 -- and a string.
-class IOEval a where
+class ParseShow a => IOEval a where
   -- | Evaluate the given item to an integer, a string representation of the
   -- value, and the number of RNG calls it took. If the `a` value is a dice
   -- value, the values of the dice should be displayed. This function adds
   -- the current location to the exception callstack.
-  evalShow :: ParseShow a => a -> ProgramStateM (Integer, Text)
+  evalShow :: a -> ProgramStateM (Integer, Text)
   evalShow a = propagateException (parseShow a) (evalShow' a)
 
-  evalShow' :: ParseShow a => a -> ProgramStateM (Integer, Text)
+  evalShow' :: a -> ProgramStateM (Integer, Text)
 
 instance IOEval Base where
   evalShow' (NBase nb) = evalShow nb
@@ -388,32 +388,35 @@ evalDieOpHelpKD kd lh is = do
 --- Pure evaluation functions for non-dice calculations
 -- Was previously its own type class that wouldn't work for evaluating Base values.
 
--- | Utility function to evaluate a binary operator.
-binOpHelp :: (IOEval a, IOEval b, ParseShow a, ParseShow b) => a -> b -> Text -> (Integer -> Integer -> Integer) -> ProgramStateM (Integer, Text)
-binOpHelp a b opS op = do
-  (a', a's) <- evalShow a
-  (b', b's) <- evalShow b
-  return (op a' b', a's <> " " <> opS <> " " <> b's)
-
-instance IOEval ExprMisc where
+instance IOEval (MiscData Expr) where
   evalShow' (MiscVar l) = evalShow l
   evalShow' (MiscIf l) = evalShow l
 
+instance (IOEval sub, Operation typ, ParseShow typ) => IOEval (BinOp sub typ) where
+  evalShow' (BinOp a tas) = foldl' foldel (evalShow a) tas
+    where
+      foldel at (typ, b) = do
+        (a', t) <- at
+        (b', t') <- evalShow b
+        return (getOperation typ a' b', t <> " " <> parseShow typ <> " " <> t')
+
 instance IOEval Expr where
-  evalShow' (NoExpr t) = evalShow t
   evalShow' (ExprMisc e) = evalShow e
-  evalShow' (Add t e) = binOpHelp t e "+" (+)
-  evalShow' (Sub t e) = binOpHelp t e "-" (-)
+  evalShow' (Expr e) = evalShow e
 
 instance IOEval Term where
-  evalShow' (NoTerm f) = evalShow f
-  evalShow' (Multi f t) = binOpHelp f t "*" (*)
-  evalShow' (Div f t) = do
-    (f', f's) <- evalShow f
-    (t', t's) <- evalShow t
-    if t' == 0
-      then evaluationException "division by zero" [parseShow t]
-      else return (div f' t', f's <> " / " <> t's)
+  evalShow' (Term (BinOp a tas)) = foldl' foldel (evalShow a) tas
+    where
+      foldel at (Div, b) = do
+        (a', t) <- at
+        (b', t') <- evalShow b
+        if b' == 0
+          then evaluationException "division by zero" [parseShow b]
+          else return (getOperation Div a' b', t <> " " <> parseShow Div <> " " <> t')
+      foldel at (typ, b) = do
+        (a', t) <- at
+        (b', t') <- evalShow b
+        return (getOperation typ a' b', t <> " " <> parseShow typ <> " " <> t')
 
 instance IOEval Func where
   evalShow' (Func s exprs) = evaluateFunction s exprs

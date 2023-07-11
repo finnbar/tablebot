@@ -203,7 +203,7 @@ genchar = Command "genchar" (snd $ head rpgSystems') (toCommand <$> rpgSystems')
 rpgSystems :: [(Text, ListValues)]
 rpgSystems =
   [ ("dnd", MultipleValues (Value 6) (DiceBase (Dice (NBase (Value 4)) (Die (Value 6)) (Just (DieOpRecur (DieOpOptionKD Drop (Low (Value 1))) Nothing))))),
-    ("wfrp", MultipleValues (Value 8) (NBase (NBParen (Paren (Add (promote (Value 20)) (promote (Die (Value 10))))))))
+    ("wfrp", MultipleValues (Value 8) (NBase (NBParen (Paren (Expr (BinOp (promote (Value 20)) [(Add, promote (Die (Value 10)))]))))))
   ]
 
 -- | Small help page for gen char.

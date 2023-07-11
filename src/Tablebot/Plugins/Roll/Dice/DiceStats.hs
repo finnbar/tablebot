@@ -44,14 +44,6 @@ getStats d = (modalOrder, expectation d, standardDeviation d)
     vals = toList d
     modalOrder = fst <$> sortBy (\(_, r) (_, r') -> compare r' r) vals
 
--- | Convenience wrapper which gets the range of the given values then applies
--- the function to the resultant distributions.
-combineRangesBinOp :: (MonadException m, Range a, Range b, ParseShow a, ParseShow b) => (Integer -> Integer -> Integer) -> a -> b -> m Experiment
-combineRangesBinOp f a b = do
-  d <- range a
-  d' <- range b
-  return $ f <$> d <*> d'
-
 rangeExpr :: (MonadException m) => Expr -> m Distribution
 rangeExpr e = do
   ex <- range e
@@ -114,20 +106,30 @@ instance (RangeList a) => RangeList (Var a) where
   rangeList' (Var _ a) = rangeList a
   rangeList' (VarLazy _ a) = rangeList a
 
+instance (ParseShow typ, Range sub) => Range (BinOp sub typ) where
+  range' (BinOp a tas) = foldl' foldel (range a) tas
+    where
+      foldel at (typ, b) = do
+        a' <- at
+        b' <- range b
+        return $ getOperation typ <$> a' <*> b'
+
 instance Range Expr where
-  range' (NoExpr t) = range t
-  range' (Add t e) = combineRangesBinOp (+) t e
-  range' (Sub t e) = combineRangesBinOp (-) t e
+  range' (Expr e) = range e
   range' (ExprMisc t) = range t
 
 instance Range Term where
-  range' (NoTerm t) = range t
-  range' (Multi t e) = combineRangesBinOp (*) t e
-  range' (Div t e) = do
-    d <- range t
-    d' <- range e
-    -- If 0 is always the denominator, the distribution will be empty.
-    return $ div <$> d <*> from (assuming (/= 0) (run d'))
+  range' (Term (BinOp a tas)) = foldl' foldel (range a) tas
+    where
+      foldel at (Div, b) = do
+        a' <- at
+        b' <- range b
+        -- If 0 is always the denominator, the distribution will be empty.
+        return $ getOperation Div <$> a' <*> from (assuming (/= 0) (run b'))
+      foldel at (typ, b) = do
+        a' <- at
+        b' <- range b
+        return $ getOperation typ <$> a' <*> b'
 
 instance Range Negation where
   range' (Neg t) = fmap negate <$> range t
